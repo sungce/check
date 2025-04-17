@@ -1,1 +1,310 @@
-# check
+import { useState } from 'react';
+
+export default function ClassRecorder() {
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedWeek, setSelectedWeek] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [pageNumber, setPageNumber] = useState('');
+  const [todayContent, setTodayContent] = useState('');
+  const [nextContent, setNextContent] = useState('');
+  const [memo, setMemo] = useState('');
+  const [records, setRecords] = useState([]);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [spreadsheetName, setSpreadsheetName] = useState('수업기록_시트');
+
+  const classes = Array.from({ length: 11 }, (_, i) => `${i + 1}반`);
+  const weeks = Array.from({ length: 40 }, (_, i) => `${i + 1}주차`);
+  const subjects = ['국어', '수학', '영어', '과학', '사회', '역사', '도덕', '체육', '음악', '미술', '기술가정', '정보', '기타'];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // 저장 진행 상태 표시
+    setIsSaving(true);
+    
+    // 스프레드시트 이름 생성 (교과_학년_날짜)
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+    const fileName = `${selectedSubject}_수업기록_${dateStr}`;
+    
+    // 저장 시뮬레이션 (실제로는 API 연동 필요)
+    setTimeout(() => {
+      const newRecord = {
+        id: Date.now(),
+        class: selectedClass,
+        subject: selectedSubject,
+        week: selectedWeek,
+        page: pageNumber,
+        todayContent,
+        nextContent,
+        memo,
+        date: today.toLocaleDateString()
+      };
+      
+      setRecords([...records, newRecord]);
+      setIsSaving(false);
+      setIsSubmitted(true);
+      setSpreadsheetName(fileName);
+      
+      // 폼 초기화
+      setPageNumber('');
+      setTodayContent('');
+      setNextContent('');
+      setMemo('');
+    }, 1500); // 1.5초 후 저장 완료 (실제 저장 시간 시뮬레이션)
+  };
+
+  const handleReset = () => {
+    setSelectedClass('');
+    setSelectedWeek('');
+    setPageNumber('');
+    setTodayContent('');
+    setNextContent('');
+    setMemo('');
+    setIsSubmitted(false);
+  };
+
+  const getTitle = () => {
+    if (selectedSubject) {
+      return `${selectedSubject} 수업 기록 시스템`;
+    }
+    return '수업 기록 시스템';
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-gray-50">
+      <h1 className="text-2xl font-bold mb-6 text-center text-indigo-700">{getTitle()}</h1>
+      
+      {!isSubmitted ? (
+        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                📚 교과 선택
+              </label>
+              <select 
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
+                required
+              >
+                <option value="">교과를 선택하세요</option>
+                {subjects.map((subject) => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                🏫 반 선택
+              </label>
+              <select 
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
+                required
+              >
+                <option value="">반을 선택하세요</option>
+                {classes.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                📅 주차 선택
+              </label>
+              <select 
+                value={selectedWeek}
+                onChange={(e) => setSelectedWeek(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
+                required
+              >
+                <option value="">주차를 선택하세요</option>
+                {weeks.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              📖 페이지
+            </label>
+            <input 
+              type="text" 
+              value={pageNumber}
+              onChange={(e) => setPageNumber(e.target.value)}
+              placeholder="예) 32-35쪽"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
+              required
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              🎯 오늘 수업 내용
+            </label>
+            <textarea 
+              value={todayContent}
+              onChange={(e) => setTodayContent(e.target.value)}
+              placeholder="오늘 진행한 수업 내용을 적어주세요."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 h-24"
+              required
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              ⏭️ 다음 차시 수업 내용
+            </label>
+            <textarea 
+              value={nextContent}
+              onChange={(e) => setNextContent(e.target.value)}
+              placeholder="다음 차시에 진행할 수업 내용을 적어주세요."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 h-24"
+              required
+            />
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              📝 메모
+            </label>
+            <textarea 
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="추가 메모사항을 적어주세요."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 h-24"
+            />
+          </div>
+          
+          <div className="mb-6 p-3 bg-blue-50 rounded-md border border-blue-200">
+            <div className="flex items-start">
+              <span className="text-blue-500 mr-2 mt-1">ℹ️</span>
+              <div>
+                <p className="text-blue-800 font-medium">구글 스프레드시트 저장 정보</p>
+                <p className="text-blue-700 text-sm mt-1">
+                  저장 시 다음 파일명으로 구글 드라이브에 저장됩니다: 
+                  <br />
+                  <span className="font-medium bg-blue-100 px-2 py-1 rounded mt-1 inline-block">
+                    {selectedSubject ? `${selectedSubject}_수업기록_${new Date().getFullYear()}${(new Date().getMonth()+1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}` : '교과_수업기록_YYYYMMDD'}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-4">
+            <button 
+              type="button"
+              onClick={handleReset}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 font-medium"
+              disabled={isSaving}
+            >
+              🔄 초기화
+            </button>
+            <button 
+              type="submit"
+              className={`px-4 py-2 rounded-md font-medium flex items-center justify-center min-w-32 ${isSaving ? 'bg-yellow-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'} focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  저장 중...
+                </>
+              ) : (
+                <>💾 저장하기</>
+              )}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="mb-4">
+            <div className="flex items-center mb-2">
+              <span className="text-green-500 mr-2">✅</span>
+              <h2 className="text-xl font-semibold text-green-600">수업 기록이 저장되었습니다!</h2>
+            </div>
+            <p className="text-gray-700">작성하신 내용이 성공적으로 구글 스프레드시트에 저장되었습니다.</p>
+          </div>
+          
+          <div className="bg-green-50 p-4 rounded-md mb-6 border border-green-200">
+            <div className="flex items-center mb-2">
+              <span className="text-green-600 mr-2">📊</span>
+              <h3 className="font-medium text-green-800">스프레드시트 저장 정보</h3>
+            </div>
+            <p className="text-gray-800 mb-3">
+              <span className="font-medium">파일명:</span> 
+              <span className="bg-green-100 px-2 py-1 rounded ml-2 inline-block">
+                {spreadsheetName}.xlsx
+              </span>
+            </p>
+            <p className="font-medium text-gray-800">📚 {selectedSubject} | 🏫 {selectedClass} | 📅 {selectedWeek} | 📆 {new Date().toLocaleDateString()}</p>
+            <p className="mt-2 text-gray-800"><span className="font-medium">📖 페이지:</span> {pageNumber}</p>
+          </div>
+          
+          <div className="flex space-x-4">
+            <button 
+              onClick={handleReset}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            >
+              ✏️ 새 기록 작성하기
+            </button>
+            
+            <button 
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium flex items-center"
+              onClick={() => alert('스프레드시트를 열어봅니다.')}
+            >
+              📊 스프레드시트 열기
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {records.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4 text-indigo-700">📋 저장된 기록</h2>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-indigo-50">
+                <tr>
+                  <th className="py-2 px-4 text-left text-indigo-900">📆 날짜</th>
+                  <th className="py-2 px-4 text-left text-indigo-900">📚 교과</th>
+                  <th className="py-2 px-4 text-left text-indigo-900">🏫 반</th>
+                  <th className="py-2 px-4 text-left text-indigo-900">📅 주차</th>
+                  <th className="py-2 px-4 text-left text-indigo-900">📖 페이지</th>
+                  <th className="py-2 px-4 text-left text-indigo-900">🔍 상세보기</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record) => (
+                  <tr key={record.id} className="border-t border-gray-200 hover:bg-gray-50">
+                    <td className="py-2 px-4 text-gray-800">{record.date}</td>
+                    <td className="py-2 px-4 text-gray-800">{record.subject}</td>
+                    <td className="py-2 px-4 text-gray-800">{record.class}</td>
+                    <td className="py-2 px-4 text-gray-800">{record.week}</td>
+                    <td className="py-2 px-4 text-gray-800">{record.page}</td>
+                    <td className="py-2 px-4">
+                      <button className="text-indigo-600 hover:text-indigo-800 font-medium">
+                        보기
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
