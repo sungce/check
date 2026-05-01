@@ -330,7 +330,7 @@
 
 <script>
 // 새로 전달해주신 구글 Apps Script 웹앱 URL 적용 완료
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymYY7tfiKXZkt-hqJrAuxx_5hncnuDXSH732J5Fs18d0Xs8t2nHpcoqpIZy-FIK9wtOA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmczQhO2gw_GFSRY4U4bbXM675BBFQgJABz44PSHHRO9NF09h-4CtxVJ7ZeCbCmkDYWQ/exec';
 
 // 데이터 관리 로직
 const KEY = 'cprogress_v3';
@@ -401,15 +401,21 @@ async function loadFromSheet() {
   try {
     document.getElementById('sync-status').textContent = '⏳ 구글 시트 불러오는 중...';
     
-    // 수정사항: Apps Script URL 우회(redirect)를 정상적으로 따르도록 옵션 명시
+    // 캐시 우회 쿼리 파라미터가 GAS 리다이렉트와 충돌할 수 있어 제거하고 단순화했습니다.
     const res = await fetch(SCRIPT_URL, {
       method: 'GET',
-      redirect: 'follow' // 리다이렉션을 허용하여 CORS 차단 방지
+      redirect: 'follow'
     });
     
     if (!res.ok) throw new Error(`서버 응답 오류 (상태 코드: ${res.status})`);
     
     const progressData = await res.json();
+
+    // Apps Script가 내부 에러를 JSON으로 무사히 보냈을 경우 잡아냅니다.
+    if (progressData && progressData.status === 'error') {
+      console.error("Apps Script 내부 에러:", progressData.message);
+      throw new Error("Apps Script 에러: " + progressData.message);
+    }
     
     if (progressData && Object.keys(progressData).length > 0) {
       // 로컬 데이터와 시트 데이터 병합 (시트 데이터가 최신 진도)
@@ -422,8 +428,7 @@ async function loadFromSheet() {
     console.error("구글 시트 연동 에러:", e);
     document.getElementById('sync-status').textContent = '⚠️ 연결 실패 (로컬 사용)';
     
-    // 에러 발생 시 안내 토스트 띄우기
-    toast('시트 연결에 실패했습니다. Apps Script 권한 설정("모든 사용자")을 확인해 주세요.', 'err');
+    toast('시트 연결 오류. 코드를 새 버전으로 배포했는지 확인해 주세요.', 'err');
     loadLocalFallback();
   }
 }
@@ -471,18 +476,24 @@ function syncProgressToSheet(classId, unitId, lessonId, memo, updatedAt) {
     }
   };
 
-  // 수정사항: POST 전송 시 OPTIONS 사전 요청(preflight) 차단을 막기 위해 text/plain 속성 사용
   fetch(SCRIPT_URL, {
     method: 'POST',
     redirect: 'follow', // 리다이렉션 허용
     headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
+      'Content-Type': 'text/plain;charset=utf-8' // CORS Preflight 우회
     },
     body: JSON.stringify(payload)
-  }).catch(e => {
-    console.error("구글 시트 저장 실패", e);
-    toast('클라우드 저장 실패 (권한 문제일 수 있습니다)', 'err');
-  });
+  }).then(res => res.json())
+    .then(data => {
+      if (data.status === 'error') {
+        console.error("구글 시트 저장 서버 에러:", data.message);
+        toast('클라우드 기록 중 서버 내부 에러가 발생했습니다.', 'err');
+      }
+    })
+    .catch(e => {
+      console.error("구글 시트 저장 통신 실패", e);
+      toast('클라우드 통신 실패. 로컬에만 임시 저장되었습니다.', 'err');
+    });
 }
 
 function uid() { 
@@ -510,7 +521,6 @@ function getProgressPercent(cid) {
   return tot && found > -1 ? Math.round(found / tot * 100) : 0;
 }
 
-// 수정됨: 순번(차시 번호)까지 반환하도록 변경
 function getLessonInfo(unitId, lessonId) {
   for (const u of AppState.curriculum) {
     if (u.id === unitId) {
@@ -534,7 +544,7 @@ function toast(msg, type = '') {
   const t = document.getElementById('toast'); 
   t.textContent = msg; 
   t.className = `toast ${type} show`;
-  setTimeout(() => t.className = 'toast', 3000);
+  setTimeout(() => t.className = 'toast', 3500);
 }
 
 let curView = 'dashboard';
