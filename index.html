@@ -396,12 +396,33 @@ function defaults() {
 
 let AppState = defaults();
 
-// 1. 구글 시트에서 데이터 불러오기 (앱 실행 시 자동 작동)
+// 앱 실행 시 브라우저에 저장된 내 설정(학급/커리큘럼/기록)을 먼저 불러옵니다.
+function initLocalData() {
+  try {
+    const r = localStorage.getItem(KEY);
+    if (r) { 
+      const p = JSON.parse(r);
+      const d = defaults(); 
+      AppState = { 
+        classes: p.classes || d.classes, 
+        curriculum: p.curriculum || d.curriculum, 
+        progress: p.progress || {}, 
+        history: p.history || {} 
+      }; 
+    }
+  } catch(e) {
+    console.error('로컬 데이터 로드 실패', e);
+  }
+}
+
+// 1. 내 설정을 먼저 적용
+initLocalData();
+
+// 2. 구글 시트에서 진도율 데이터만 불러와 덮어씌우기
 async function loadFromSheet() {
   try {
     document.getElementById('sync-status').textContent = '⏳ 구글 시트 불러오는 중...';
     
-    // 캐시 우회 쿼리 파라미터가 GAS 리다이렉트와 충돌할 수 있어 제거하고 단순화했습니다.
     const res = await fetch(SCRIPT_URL, {
       method: 'GET',
       redirect: 'follow'
@@ -418,39 +439,22 @@ async function loadFromSheet() {
     }
     
     if (progressData && Object.keys(progressData).length > 0) {
-      // 로컬 데이터와 시트 데이터 병합 (시트 데이터가 최신 진도)
+      // 로컬 데이터(내 설정)를 유지한 채, 시트의 진도 데이터만 반영
       AppState.progress = progressData;
-      localStorage.setItem(KEY, JSON.stringify(AppState)); 
+      save(); 
     }
     document.getElementById('sync-status').textContent = '☁️ 구글 시트 연동됨';
-    renderView(curView);
   } catch(e) {
     console.error("구글 시트 연동 에러:", e);
     document.getElementById('sync-status').textContent = '⚠️ 연결 실패 (로컬 사용)';
-    
     toast('시트 연결 오류. 코드를 새 버전으로 배포했는지 확인해 주세요.', 'err');
-    loadLocalFallback();
+  } finally {
+    // 통신 성공 여부와 관계없이 설정된 데이터로 화면을 그립니다.
+    renderView(curView);
   }
 }
 
-function loadLocalFallback() {
-  try {
-    const r = localStorage.getItem(KEY);
-    if (r) { 
-      const p = JSON.parse(r);
-      const d = defaults(); 
-      AppState = { 
-        classes: p.classes || d.classes, 
-        curriculum: p.curriculum || d.curriculum, 
-        progress: p.progress || {}, 
-        history: p.history || {} 
-      }; 
-    }
-  } catch(e) {}
-  renderView(curView);
-}
-
-// 앱 실행 시 구글 시트 데이터 로드
+// 앱 실행 시 구글 시트 연동 (내 설정을 불러온 후 실행됨)
 loadFromSheet();
 
 function save() { 
@@ -458,7 +462,7 @@ function save() {
   localStorage.setItem(KEY, JSON.stringify(AppState)); 
 }
 
-// 2. 구글 시트로 데이터 보내기 (저장할 때 작동)
+// 3. 구글 시트로 데이터 보내기 (저장할 때 작동)
 function syncProgressToSheet(classId, unitId, lessonId, memo, updatedAt) {
   const c = AppState.classes.find(x => x.id === classId);
   if (!c) return;
